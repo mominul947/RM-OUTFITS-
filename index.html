@@ -1383,33 +1383,25 @@ function initSwiper() {
             if (window.tempDetailQty < 1) window.tempDetailQty = 1; 
             document.getElementById('detail-qty-display').innerText = window.tempDetailQty;
         };
-        window.buyNow = (id) => {
-            if (!currentUser) {
-                premiumAlert('warning', 'Login Required', 'অর্ডার করতে দয়া করে আগে লগইন করুন।');
-                closeProductDetail();
-                showAppPage('profile');
-                return;
+   window.buyNow = (id) => {
+    // লগইন চেক সরিয়ে দেওয়া হলো
+    const product = products.find(p => p.id === id);
+    if (product) {
+        let qtyToAdd = window.tempDetailQty || 1;
+        closeProductDetail();
+
+        openCheckout([{
+            ...product,
+            quantity: qtyToAdd,
+            selectedAttrs: {
+                ...tempSelectedAttrs
             }
+        }]);
 
-            const product = products.find(p => p.id === id);
-            if (product) {
-               
-                let qtyToAdd = window.tempDetailQty || 1;
-                closeProductDetail();
-
-                openCheckout([{
-                    ...product,
-                    quantity: qtyToAdd,
-                    selectedAttrs: {
-                        ...tempSelectedAttrs
-                    }
-                }]);
-
-               
-                tempSelectedAttrs = {};
-                window.tempDetailQty = 1;
-            }
-        };
+        tempSelectedAttrs = {};
+        window.tempDetailQty = 1;
+    }
+};
         
         window.addToCart = (id, isFromDetail = false) => {
             const product = products.find(p => p.id === id);
@@ -1681,20 +1673,24 @@ function togglePasswordVisibility() {
         };
 
         window.goToCheckout = () => {
-            if (!currentUser) {
-                premiumAlert('warning', 'Login Required', 'চেকআউট করতে আগে লগইন করুন।');
-                closeCart();
-                showAppPage('profile');
-                return;
-            }
-            const selectedItems = cart.filter(item => item.isSelected !== false);
-            if (selectedItems.length === 0) {
-                toast('error', 'দয়া করে অন্তত একটি প্রোডাক্ট সিলেক্ট করুন!');
-                return;
-            }
-            closeCart();
-            openCheckout(selectedItems);
-        };
+    // লগইন চেকটি সরিয়ে দেওয়া হলো বা কমেন্ট করা হলো
+    /*
+    if (!currentUser) {
+        premiumAlert('warning', 'Login Required', 'চেকআউট করতে আগে লগইন করুন।');
+        closeCart();
+        showAppPage('profile');
+        return;
+    }
+    */
+
+    const selectedItems = cart.filter(item => item.isSelected !== false);
+    if (selectedItems.length === 0) {
+        toast('error', 'দয়া করে অন্তত একটি প্রোডাক্ট সিলেক্ট করুন!');
+        return;
+    }
+    closeCart();
+    openCheckout(selectedItems);
+};
 
       
         window.updateQty = (id, change) => {
@@ -1709,24 +1705,7 @@ function togglePasswordVisibility() {
         };
 
         
-        window.goToCheckout = () => {
-          
-            if (!currentUser) {
-                premiumAlert('warning', 'Login Required', 'চেকআউট করতে দয়া করে আগে লগইন করুন।');
-                closeCart(); 
-                showAppPage('profile'); 
-                return;
-            }
-
-            if (cart.length === 0) {
-                toast('error', 'আপনার কার্টটি খালি!');
-                return;
-            }
-
-            closeCart();
-            openCheckout(cart);
-        };
-
+        
         
         document.getElementById('search-input').addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
@@ -2361,43 +2340,39 @@ async function fetchCategories() {
 
       
         async function openCheckout(items = []) {
-            if (!currentUser) {
-                premiumAlert('warning', 'Login Required', 'অর্ডার করতে দয়া করে আগে লগইন করুন।');
-                showAppPage('profile');
-                return;
-            }
+    // লগইন চেক সরিয়ে দেওয়া হয়েছে যেন সবাই অর্ডার করতে পারে
+    
+    currentCheckoutItems = items.length > 0 ? items : cart;
+    if (currentCheckoutItems.length === 0) {
+        toast('error', 'Cart is empty!');
+        return;
+    }
 
-            currentCheckoutItems = items.length > 0 ? items : cart;
-            if (currentCheckoutItems.length === 0) {
-                toast('error', 'Cart is empty!');
-                return;
-            }
+    // চেকআউট মোডাল দেখানো
+    document.getElementById('checkout-modal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
 
-            document.getElementById('checkout-modal').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
+    loadBDDivisions();
+    renderCheckoutSummary();
 
-            loadBDDivisions();
-            renderCheckoutSummary();
-
-           
-            const ruleId = currentCheckoutItems[0].deliveryRule;
-            if (ruleId) {
-                try {
-                    const ruleDoc = await db.collection('delivery_rules').doc(ruleId).get();
-                    if (ruleDoc.exists) {
-                        selectedDeliveryRule = ruleDoc.data();
-                        renderPaymentOptions(selectedDeliveryRule);
-                    } else {
-                        setFallbackPayment();
-                    }
-                } catch (e) {
-                    setFallbackPayment();
-                }
+    // ডেলিভারি রুল সেট করা
+    const ruleId = currentCheckoutItems[0].deliveryRule;
+    if (ruleId) {
+        try {
+            const ruleDoc = await db.collection('delivery_rules').doc(ruleId).get();
+            if (ruleDoc.exists) {
+                selectedDeliveryRule = ruleDoc.data();
+                renderPaymentOptions(selectedDeliveryRule);
             } else {
                 setFallbackPayment();
             }
+        } catch (e) {
+            setFallbackPayment();
         }
-
+    } else {
+        setFallbackPayment();
+    }
+}
        
         function loadBDDivisions() {
             const divSelect = document.getElementById('ship-division');
@@ -2524,7 +2499,7 @@ async function fetchCategories() {
     // ১. ক্যাশ অন ডেলিভারি অপশন
     if (isCodOn) {
         html += `
-        <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer mb-3 shadow-sm" onclick="togglePaymentView('cod')">
+        <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer mb-4 shadow-sm" onclick="togglePaymentView('cod')">
             <input type="radio" name="pay-method" value="COD" checked class="w-5 h-5 accent-[#004D39]">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
@@ -2538,83 +2513,79 @@ async function fetchCategories() {
         </label>`;
     }
 
-    // ২. অনলাইন পেমেন্ট অপশন (অ্যাডভান্স বা ফুল পে)
+    // ২. অনলাইন পেমেন্ট (বিকাশ/নগদ)
     if (isAdvanceOn || isFullPayOn) {
-        html += `<div class="space-y-3">`;
-
-        if (isAdvanceOn) {
-            html += `
-            <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer shadow-sm" onclick="togglePaymentView('advance')">
-                <input type="radio" name="pay-method" value="Advance Pay" ${!isCodOn ? 'checked' : ''} class="w-5 h-5 accent-[#004D39]">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                        <i class="fa-solid fa-paper-plane"></i>
-                    </div>
-                    <div>
-                        <p class="font-bold text-sm">Pay Delivery Charge (Advance)</p>
-                        <p class="text-[10px] text-gray-400">বিকাশ/নগদ এ অগ্রিম পেমেন্ট করুন</p>
-                    </div>
-                </div>
-            </label>`;
-        }
-
-        if (isFullPayOn) {
-            html += `
-            <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer shadow-sm" onclick="togglePaymentView('full')">
-                <input type="radio" name="pay-method" value="Full Payment" ${(!isCodOn && !isAdvanceOn) ? 'checked' : ''} class="w-5 h-5 accent-[#004D39]">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
-                        <i class="fa-solid fa-credit-card"></i>
-                    </div>
-                    <div>
-                        <p class="font-bold text-sm">Full Payment</p>
-                        <p class="text-[10px] text-gray-400">অর্ডারের পুরো টাকা অগ্রিম পেমেন্ট করুন</p>
-                    </div>
-                </div>
-            </label>`;
-        }
-
-        // অ্যাডমিন নাম্বার নির্ধারণ (বিকাশ নাম্বারকে প্রাইমারি হিসেবে ধরা হয়েছে)
-        const adminNumber = isFullPayOn ? rule.fullPay.details : (rule.advancePay ? (rule.advancePay.bkash || rule.advancePay.nagad) : 'N/A');
+        // এডমিনের দেওয়া নাম্বারগুলো নেওয়া হচ্ছে
+        const bkashNum = rule.advancePay ? rule.advancePay.bkash : (rule.fullPay ? rule.fullPay.details : 'N/A');
+        const nagadNum = rule.advancePay ? rule.advancePay.nagad : (rule.fullPay ? rule.fullPay.details : 'N/A');
 
         html += `
-        <div id="payment-details-box" class="${isCodOn ? 'hidden' : ''} border-2 border-emerald-100 rounded-[32px] overflow-hidden bg-white mt-4 fade-in">
-            <div class="bg-emerald-50 p-5 text-center">
-                <img src="https://cdn.phototourl.com/free/2026-06-11-3b579f48-23a9-458c-a17d-4ad4b482a04b.jpg" class="h-14 mx-auto mb-3 rounded-lg shadow-sm border border-white">
-                <p class="text-[12px] font-black text-emerald-800 uppercase tracking-[2px]">BKash, Nagad, Rocket, Upay</p>
-            </div>
-            <div class="p-6 space-y-5">
-                <div class="bg-gray-50 p-4 rounded-2xl border border-dashed border-emerald-200">
-                    <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">Send Money to this number</p>
-                    <div class="flex items-center justify-between">
-                        <span id="display-number" class="text-xl font-black text-[#004D39]">${adminNumber}</span>
-                        <button type="button" onclick="copyNumber()" class="bg-[#004D39] text-white px-4 py-1.5 rounded-lg text-[10px] font-bold active:scale-95 shadow-md">COPY</button>
+        <div class="space-y-3">
+            <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer shadow-sm" onclick="togglePaymentView('online')">
+                <input type="radio" name="pay-method" value="Online Payment" ${!isCodOn ? 'checked' : ''} class="w-5 h-5 accent-[#004D39]">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
+                        <i class="fa-solid fa-mobile-screen-button"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm">Pay with bKash / Nagad</p>
+                        <p class="text-[10px] text-gray-400">বিকাশ বা নগদ অ্যাপ থেকে পেমেন্ট করুন</p>
                     </div>
                 </div>
-                
-                <div class="space-y-4">
-                    <div>
-                        <label class="text-[11px] text-gray-600 font-bold mb-2 block">ট্রানজেকশন আইডি (Transaction ID):</label>
-                        <input type="text" id="trx-id-input" placeholder="e.g. 8N7A6D5F" 
-                            class="w-full p-4 rounded-xl border-2 border-gray-100 outline-none focus:border-emerald-500 font-bold uppercase text-sm">
-                    </div>
+            </label>
+
+            <!-- বিকাশ ও নগদ নাম্বার সেকশন -->
+            <div id="payment-details-box" class="${isCodOn ? 'hidden' : ''} border-2 border-emerald-100 rounded-[32px] overflow-hidden bg-white mt-4 fade-in">
+                <div class="p-5">
+                    <p class="text-center text-[11px] font-bold text-gray-400 uppercase mb-4 tracking-widest">Select Payment Method</p>
                     
-                    <div>
-                        <label class="text-[11px] text-gray-600 font-bold mb-2 block">পেমেন্টকৃত টাকার পরিমাণ (Amount):</label>
-                        <input type="number" id="pay-amount-input" placeholder="কত টাকা পাঠিয়েছেন তা লিখুন" 
-                            class="w-full p-4 rounded-xl border-2 border-gray-100 outline-none focus:border-emerald-500 font-bold text-sm">
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Bkash Button -->
+                        <div id="btn-bkash" onclick="selectProvider('bkash', '${bkashNum}')" class="provider-btn cursor-pointer border-2 border-gray-100 rounded-2xl p-3 flex flex-col items-center gap-2 transition-all hover:bg-pink-50">
+                            <img src="https://www.image2url.com/r2/default/images/1776444482333-7685eb17-4482-4a46-b0e9-233dbbf8afb2.jpg" class="h-10 rounded-lg">
+                            <span class="text-[10px] font-black text-pink-600">bKash</span>
+                        </div>
+                        
+                        <!-- Nagad Button -->
+                        <div id="btn-nagad" onclick="selectProvider('nagad', '${nagadNum}')" class="provider-btn cursor-pointer border-2 border-gray-100 rounded-2xl p-3 flex flex-col items-center gap-2 transition-all hover:bg-orange-50">
+                            <img src="https://www.image2url.com/r2/default/images/1776444618043-a5b450ee-68e9-4302-b10d-10ffcad7e9e5.jpg" class="h-10 rounded-lg">
+                            <span class="text-[10px] font-black text-orange-600">Nagad</span>
+                        </div>
+                    </div>
+
+                    <!-- ডাইনামিক নাম্বার বক্স -->
+                    <div class="mt-6 bg-gray-50 p-4 rounded-2xl border border-dashed border-emerald-200">
+                        <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">Send Money / Pay to this <span id="selected-provider-name" class="text-[#004D39]">Number</span></p>
+                        <div class="flex items-center justify-between">
+                            <span id="display-number" class="text-xl font-black text-[#004D39]">Select Method</span>
+                            <button type="button" onclick="copyNumber()" class="bg-[#004D39] text-white px-4 py-1.5 rounded-lg text-[10px] font-bold active:scale-95 shadow-md">COPY</button>
+                        </div>
+                    </div>
+
+                    <div class="mt-6 space-y-4">
+                        <div>
+                            <label class="text-[11px] text-gray-600 font-bold mb-2 block">Transaction ID:</label>
+                            <input type="text" id="trx-id-input" placeholder="e.g. 8N7A6D5F" class="w-full p-4 rounded-xl border-2 border-gray-100 outline-none focus:border-emerald-500 font-bold uppercase text-sm">
+                        </div>
+                        <div>
+                            <label class="text-[11px] text-gray-600 font-bold mb-2 block">Amount Paid:</label>
+                            <input type="number" id="pay-amount-input" placeholder="টাকার পরিমাণ লিখুন" class="w-full p-4 rounded-xl border-2 border-gray-100 outline-none focus:border-emerald-500 font-bold text-sm">
+                        </div>
                     </div>
                 </div>
             </div>
-        </div></div>`;
+        </div>`;
     }
 
     container.innerHTML = html;
     updateTotalBill(rule);
 
+    // ডিফল্টভাবে প্রথম পেমেন্ট মেথড সিলেক্ট করে রাখা (বিকাশ)
     if (!isCodOn) {
-        togglePaymentView(isAdvanceOn ? 'advance' : 'full');
+        const bkashNum = rule.advancePay ? rule.advancePay.bkash : (rule.fullPay ? rule.fullPay.details : 'N/A');
+        setTimeout(() => selectProvider('bkash', bkashNum), 100);
     }
+}
 }
         // ১. চেকআউট পেজের জন্য কপি ফাংশন
 window.copyNumber = () => {
@@ -2674,8 +2645,7 @@ function fallbackCopyText(text, message) {
     }
     textArea.remove();
 }
-     
-        async function placeOrder() {
+async function placeOrder() {
     const btn = document.getElementById('place-order-btn');
     const name = document.getElementById('ship-name').value;
     const phone = document.getElementById('ship-number').value;
@@ -2695,16 +2665,17 @@ function fallbackCopyText(text, message) {
     const trxId = document.getElementById('trx-id-input') ? document.getElementById('trx-id-input').value.trim() : '';
     const payAmount = document.getElementById('pay-amount-input') ? document.getElementById('pay-amount-input').value.trim() : '0';
 
-    // ভ্যালিডেশন
     if (payMethod !== 'COD') {
         if (!trxId) return premiumAlert('warning', 'TrxID Required', 'ট্রানজেকশন আইডি দিন।');
         if (!payAmount || payAmount === '0') return premiumAlert('warning', 'Amount Required', 'পেমেন্টকৃত টাকার পরিমাণ লিখুন।');
     }
 
+    // গুরুত্বপূর্ণ পরিবর্তন: ইউজার লগইন না থাকলে বিকল্প ইমেইল/আইডি ব্যবহার
     const orderData = {
         customerName: name,
         customerNumber: phone,
-        customerEmail: currentUser.email,
+        customerEmail: currentUser ? currentUser.email : "Guest_" + phone, // গেস্ট ইউজার হলে তার ফোন নম্বর দিয়ে আইডি তৈরি
+        isGuest: !currentUser, // গেস্ট অর্ডার কিনা তা বোঝার জন্য
         address: {
             division,
             district,
@@ -2716,7 +2687,7 @@ function fallbackCopyText(text, message) {
         totalAmount: document.getElementById('summ-total').innerText,
         paymentMethod: payMethod,
         transactionId: trxId || 'N/A',
-        paidAmount: payAmount || '0', // নতুন ফিল্ড যুক্ত হলো
+        paidAmount: payAmount || '0',
         status: 'pending',
         createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
@@ -2730,7 +2701,13 @@ function fallbackCopyText(text, message) {
         cart = cart.filter(item => !currentCheckoutItems.find(ci => ci.id === item.id));
         updateCart();
         closeCheckout();
-        showAppPage('orders');
+        
+        // যদি গেস্ট হয় তবে 'My Orders' পেজে কিছু দেখাবে না, তাই হোম পেজে পাঠানো ভালো
+        if (currentUser) {
+            showAppPage('orders');
+        } else {
+            showAppPage('home');
+        }
     } catch (e) {
         alert("Error placing order: " + e.message);
     } finally {
@@ -2738,7 +2715,6 @@ function fallbackCopyText(text, message) {
         btn.innerHTML = '<span>CONFIRM ORDER</span> <i class="fa-solid fa-circle-check"></i>';
     }
 }
-
         function closeCheckout() {
             document.getElementById('checkout-modal').classList.add('hidden');
             document.body.style.overflow = 'auto';
