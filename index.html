@@ -2500,7 +2500,8 @@ async function openCheckout(items = []) {
         }
 
       
-    function renderPaymentOptions(rule) {
+    // ১. পেমেন্ট অপশন রেন্ডার করার ফাংশন
+function renderPaymentOptions(rule) {
     const container = document.getElementById('payment-options');
     if (!container) return;
 
@@ -2509,7 +2510,7 @@ async function openCheckout(items = []) {
     const isAdvanceOn = rule.advancePay && rule.advancePay.status === 'on';
     const isFullPayOn = rule.fullPay && rule.fullPay.status === 'on';
 
-    // ১. ক্যাশ অন ডেলিভারি অপশন
+    // ক্যাশ অন ডেলিভারি অপশন
     if (isCodOn) {
         html += `
         <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer mb-3 shadow-sm" onclick="togglePaymentView('cod')">
@@ -2526,7 +2527,7 @@ async function openCheckout(items = []) {
         </label>`;
     }
 
-    // ২. অনলাইন পেমেন্ট অপশন (অ্যাডভান্স বা ফুল পে)
+    // অনলাইন পেমেন্ট (অ্যাডভান্স বা ফুল পে)
     if (isAdvanceOn || isFullPayOn) {
         html += `<div class="space-y-3">`;
 
@@ -2540,7 +2541,7 @@ async function openCheckout(items = []) {
                     </div>
                     <div>
                         <p class="font-bold text-sm">Pay Delivery Charge (Advance)</p>
-                        <p class="text-[10px] text-gray-400">বিকাশ/নগদ এ অগ্রিম পেমেন্ট করুন</p>
+                        <p class="text-[10px] text-gray-400">ডেলিভারি চার্জ অগ্রিম প্রদান করুন</p>
                     </div>
                 </div>
             </label>`;
@@ -2556,26 +2557,38 @@ async function openCheckout(items = []) {
                     </div>
                     <div>
                         <p class="font-bold text-sm">Full Payment</p>
-                        <p class="text-[10px] text-gray-400">অর্ডারের পুরো টাকা অগ্রিম পেমেন্ট করুন</p>
+                        <p class="text-[10px] text-gray-400">অর্ডারের সম্পূর্ণ টাকা অগ্রিম পেমেন্ট করুন</p>
                     </div>
                 </div>
             </label>`;
         }
 
-        // অ্যাডমিন নাম্বার নির্ধারণ (বিকাশ নাম্বারকে প্রাইমারি হিসেবে ধরা হয়েছে)
-        const adminNumber = isFullPayOn ? rule.fullPay.details : (rule.advancePay ? (rule.advancePay.bkash || rule.advancePay.nagad) : 'N/A');
-
+        // অনলাইন পেমেন্ট ডিটেইলস বক্স (বিকাশ ও নগদ বাটন সহ)
         html += `
         <div id="payment-details-box" class="${isCodOn ? 'hidden' : ''} border-2 border-emerald-100 rounded-[32px] overflow-hidden bg-white mt-4 fade-in">
-            <div class="bg-emerald-50 p-5 text-center">
-                <img src="https://cdn.phototourl.com/free/2026-06-11-3b579f48-23a9-458c-a17d-4ad4b482a04b.jpg" class="h-14 mx-auto mb-3 rounded-lg shadow-sm border border-white">
-                <p class="text-[12px] font-black text-emerald-800 uppercase tracking-[2px]">BKash, Nagad, Rocket, Upay</p>
+            <div class="bg-emerald-50 p-4">
+                <p class="text-[11px] font-bold text-center text-emerald-800 uppercase mb-4">নিচের যেকোনো একটি মাধ্যমে পেমেন্ট করুন</p>
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- bKash Button -->
+                    <button type="button" onclick="selectProvider('bkash', '${isFullPayOn ? rule.fullPay.details : (rule.advancePay ? rule.advancePay.bkash : '')}')" 
+                        id="btn-bkash" class="provider-btn bg-white p-2 rounded-xl border-2 border-transparent transition-all flex flex-col items-center shadow-sm">
+                        <img src="https://www.image2url.com/r2/default/images/1776444482333-7685eb17-4482-4a46-b0e9-233dbbf8afb2.jpg" class="h-8 object-contain mb-1">
+                        <span class="text-[10px] font-black text-pink-600">bKash</span>
+                    </button>
+                    <!-- Nagad Button -->
+                    <button type="button" onclick="selectProvider('nagad', '${isFullPayOn ? rule.fullPay.details : (rule.advancePay ? rule.advancePay.nagad : '')}')" 
+                        id="btn-nagad" class="provider-btn bg-white p-2 rounded-xl border-2 border-transparent transition-all flex flex-col items-center shadow-sm">
+                        <img src="https://www.image2url.com/r2/default/images/1776444618043-a5b450ee-68e9-4302-b10d-10ffcad7e9e5.jpg" class="h-8 object-contain mb-1">
+                        <span class="text-[10px] font-black text-orange-600">Nagad</span>
+                    </button>
+                </div>
             </div>
+
             <div class="p-6 space-y-5">
                 <div class="bg-gray-50 p-4 rounded-2xl border border-dashed border-emerald-200">
                     <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">Send Money to this number</p>
                     <div class="flex items-center justify-between">
-                        <span id="display-number" class="text-xl font-black text-[#004D39]">${adminNumber}</span>
+                        <span id="display-number" class="text-xl font-black text-[#004D39]">Loading...</span>
                         <button type="button" onclick="copyNumber()" class="bg-[#004D39] text-white px-4 py-1.5 rounded-lg text-[10px] font-bold active:scale-95 shadow-md">COPY</button>
                     </div>
                 </div>
@@ -2586,7 +2599,6 @@ async function openCheckout(items = []) {
                         <input type="text" id="trx-id-input" placeholder="e.g. 8N7A6D5F" 
                             class="w-full p-4 rounded-xl border-2 border-gray-100 outline-none focus:border-emerald-500 font-bold uppercase text-sm">
                     </div>
-                    
                     <div>
                         <label class="text-[11px] text-gray-600 font-bold mb-2 block">পেমেন্টকৃত টাকার পরিমাণ (Amount):</label>
                         <input type="number" id="pay-amount-input" placeholder="কত টাকা পাঠিয়েছেন তা লিখুন" 
@@ -2600,10 +2612,56 @@ async function openCheckout(items = []) {
     container.innerHTML = html;
     updateTotalBill(rule);
 
+    // ডিফল্টভাবে প্রথম পেমেন্ট মেথডটি সিলেক্ট করা
     if (!isCodOn) {
-        togglePaymentView(isAdvanceOn ? 'advance' : 'full');
+        if (isAdvanceOn) togglePaymentView('advance');
+        else if (isFullPayOn) togglePaymentView('full');
     }
 }
+
+// ২. মেথড অনুযায়ী ভিউ পরিবর্তন করার ফাংশন
+window.togglePaymentView = (type) => {
+    const detailsBox = document.getElementById('payment-details-box');
+    if (!detailsBox) return;
+
+    if (type === 'cod') {
+        detailsBox.classList.add('hidden');
+    } else {
+        detailsBox.classList.remove('hidden');
+        
+        // ডিফল্টভাবে বিকাশ সিলেক্ট করা
+        if (selectedDeliveryRule) {
+            let bKashNum = "";
+            if (type === 'full') {
+                bKashNum = selectedDeliveryRule.fullPay.details;
+            } else {
+                bKashNum = selectedDeliveryRule.advancePay.bkash || selectedDeliveryRule.advancePay.nagad;
+            }
+            selectProvider('bkash', bKashNum);
+        }
+    }
+};
+
+// ৩. বিকাশ বা নগদ বাটন ক্লিক করার ফাংশন
+window.selectProvider = (name, number) => {
+    // ডিসপ্লেতে নম্বর সেট করা
+    const displayNum = document.getElementById('display-number');
+    if (displayNum) displayNum.innerText = number || 'নম্বর পাওয়া যায়নি';
+
+    // বাটন হাইলাইট করা
+    document.querySelectorAll('.provider-btn').forEach(btn => {
+        btn.classList.remove('border-emerald-500', 'bg-emerald-50', 'scale-105');
+        btn.classList.add('border-transparent', 'bg-white');
+    });
+
+    const activeBtn = document.getElementById('btn-' + name);
+    if (activeBtn) {
+        activeBtn.classList.remove('border-transparent', 'bg-white');
+        activeBtn.classList.add('border-emerald-500', 'bg-emerald-50', 'scale-105');
+    }
+    
+    selectedProvider = name;
+};
         // ১. চেকআউট পেজের জন্য কপি ফাংশন
 window.copyNumber = () => {
     const num = document.getElementById('display-number').innerText;
