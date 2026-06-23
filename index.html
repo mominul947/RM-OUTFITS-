@@ -634,7 +634,7 @@
             </footer>
         </aside>
     </div>
-<footer class="bg-[#630d16] text-white pt-12 pb-8 mt-10">
+<footer id="app-main-footer" class="bg-[#630d16] text-white pt-12 pb-8 mt-10">
     <div class="container mx-auto px-6">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
             
@@ -1797,76 +1797,52 @@ async function fetchCategories() {
         let currentUser = null;
         let isLoginMode = true;
 
-      
-        function showAppPage(pageId) {
-    // ১. সব ড্রয়ার বা ওভারলে বন্ধ করা
+ function showAppPage(pageId) {
+    // ১. ড্রয়ার এবং অন্যান্য ভিউ বন্ধ করা
     closeCart();
     closeCheckout();
     closeProductDetail();
-    if (window.closeOrderDetails) {
-        closeOrderDetails();
-    }
+    if (window.closeOrderDetails) closeOrderDetails();
 
-    // ২. সার্চ বক্স কন্ট্রোল (শুধুমাত্র Home/Dashboard এ থাকবে)
-    const searchSection = document.getElementById('main-search-section');
-    if (searchSection) {
+    // ২. মূল ফুটার হাইড/শো করা (সবচেয়ে গুরুত্বপূর্ণ অংশ)
+    const mainFooter = document.getElementById('app-main-footer');
+    if (mainFooter) {
         if (pageId === 'home') {
-            searchSection.classList.remove('hidden');
+            mainFooter.style.display = 'block'; // হোমে দেখাবে
         } else {
-            searchSection.classList.add('hidden');
+            mainFooter.style.display = 'none';  // অন্য পেজে লুকিয়ে যাবে
         }
     }
 
-    // ৩. অথেন্টিকেশন চেক (লগইন না থাকলে ফেভারিট বা অর্ডার পেজে যেতে দিবে না)
-    if ((pageId === 'favorite' || pageId === 'orders') && !currentUser) {
-        premiumAlert('warning', 'Access Denied', 'এই পেজটি দেখতে আগে লগইন করুন।');
-        pageId = 'profile'; // লগইন না থাকলে প্রোফাইল/লগইন পেজে পাঠাবে
+    // ৩. সার্চ বক্স কন্ট্রোল
+    const searchSection = document.getElementById('main-search-section');
+    if (searchSection) {
+        pageId === 'home' ? searchSection.classList.remove('hidden') : searchSection.classList.add('hidden');
     }
 
-    // ৪. সব সেকশন হাইড করা
+    // ৪. অথেন্টিকেশন চেক
+    if ((pageId === 'favorite' || pageId === 'orders') && !currentUser) {
+        premiumAlert('warning', 'Access Denied', 'এই পেজটি দেখতে আগে লগইন করুন।');
+        pageId = 'profile'; 
+    }
+
+    // ৫. সেকশন পরিবর্তন লজিক
     const sections = ['home-content', 'section-favorite', 'section-orders', 'section-profile'];
     sections.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.classList.add('hidden');
     });
 
-    // ৫. টার্গেট সেকশন শো করা
     let targetId = (pageId === 'home') ? 'home-content' : `section-${pageId}`;
     const targetSection = document.getElementById(targetId);
     if (targetSection) {
         targetSection.classList.remove('hidden');
-        window.scrollTo({
-            top: 0,
-            behavior: 'smooth'
-        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    // ৬. পেজ অনুযায়ী ডাটা লোড করা
-    if (pageId === 'favorite') loadFavorites();
-    if (pageId === 'orders') loadUserOrders();
-
-    // ৭. নেভিগেশন বাটন আপডেট করা (ডেস্কটপ এবং মোবাইল)
-    // ডেস্কটপ মেনু
-    document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('text-[#004D39]', 'active');
-        btn.classList.add('text-gray-400');
-        const btnClick = btn.getAttribute('onclick');
-        if (btnClick && btnClick.includes(`'${pageId}'`)) {
-            btn.classList.remove('text-gray-400');
-            btn.classList.add('text-[#004D39]', 'active');
-        }
-    });
-
-    // মোবাইল ফ্লুইড নেভ আপডেট (যদি মোবাইল মেনু ব্যবহার করেন)
-    document.querySelectorAll('.nav-item').forEach(item => {
-        item.classList.remove('active');
-        const onclickAttr = item.getAttribute('onclick');
-        if (onclickAttr && onclickAttr.includes(`'${pageId}'`)) {
-            item.classList.add('active');
-        }
-    });
+    // ৬. নেভিগেশন বাটন আপডেট
+    updateNavButtons(pageId);
 }
-    
 
 
         function toggleAuthMode() {
@@ -2723,12 +2699,12 @@ function fallbackCopyText(text, message) {
      
         async function placeOrder() {
     const btn = document.getElementById('place-order-btn');
-    const name = document.getElementById('ship-name').value;
-    const phone = document.getElementById('ship-number').value;
+    const name = document.getElementById('ship-name').value.trim();
+    const phone = document.getElementById('ship-number').value.trim();
     const division = document.getElementById('ship-division').value;
     const district = document.getElementById('ship-district').value;
     const upazila = document.getElementById('ship-upazila').value;
-    const address = document.getElementById('ship-address').value;
+    const address = document.getElementById('ship-address').value.trim();
 
     if (!name || !phone || !division || !district || !upazila || !address) {
         return premiumAlert('error', 'Required!', 'শিপিং তথ্য পূরণ করুন।');
@@ -2746,11 +2722,11 @@ function fallbackCopyText(text, message) {
         if (!payAmount || payAmount === '0') return premiumAlert('warning', 'Amount Required', 'পেমেন্টকৃত টাকার পরিমাণ লিখুন।');
     }
 
-    // অর্ডার ডাটা অবজেক্টে ইমেইল ফিল্ডটি আপডেট করা হয়েছে
+    // অর্ডার ডাটা অবজেক্ট
     const orderData = {
         customerName: name,
         customerNumber: phone,
-        customerEmail: currentUser ? currentUser.email : "Guest Order (" + phone + ")", // লগইন না থাকলে গেস্ট দেখাবে
+        customerEmail: currentUser ? currentUser.email : "guest_" + phone, // গেস্টদের জন্য ইউনিক আইডি
         address: {
             division,
             district,
@@ -2772,13 +2748,27 @@ function fallbackCopyText(text, message) {
 
     try {
         await db.collection('orders').add(orderData);
-        premiumAlert('success', 'Success', 'অর্ডারটি সফলভাবে সম্পন্ন হয়েছে!');
+        
+        // ১. কার্ট থেকে অর্ডারকৃত আইটেমগুলো ডিলিট করা
         cart = cart.filter(item => !currentCheckoutItems.find(ci => ci.id === item.id));
         updateCart();
+        
+        // ২. চেকআউট মোডাল বন্ধ করা
         closeCheckout();
-        showAppPage('orders');
+
+        // ৩. সাকসেস মেসেজ ও নেভিগেশন
+        if (currentUser) {
+            // ইউজার লগইন করা থাকলে তাকে অর্ডার লিস্টে পাঠাবে
+            premiumAlert('success', 'অর্ডার সফল!', 'আপনার অর্ডারটি গ্রহণ করা হয়েছে।');
+            showAppPage('orders');
+        } else {
+            // গেস্ট ইউজার হলে তাকে হোম পেজে পাঠাবে যেন সে আবার লগইন পেজে না যায়
+            premiumAlert('success', 'অর্ডার সফল!', 'ধন্যবাদ! আপনার অর্ডারটি গ্রহণ করা হয়েছে। বিস্তারিত জানতে আমরা আপনার সাথে যোগাযোগ করব।');
+            showAppPage('home');
+        }
+
     } catch (e) {
-        alert("Error placing order: " + e.message);
+        premiumAlert('error', 'দুঃখিত!', 'অর্ডারটি সম্পন্ন হয়নি। আবার চেষ্টা করুন। এরর: ' + e.message);
     } finally {
         btn.disabled = false;
         btn.innerHTML = '<span>CONFIRM ORDER</span> <i class="fa-solid fa-circle-check"></i>';
