@@ -9,6 +9,7 @@
     <!-- ========================================== -->
     <!-- 🚀 SEO AND GOOGLE SEARCH CONSOLE TAGS 🚀 -->
     <!-- ========================================== -->
+    
 <!-- Title -->
 <title>RM OUTFITS | Best Premium Online Shopping in Bangladesh</title>
 
@@ -76,7 +77,7 @@
 <!-- PWA & App Install Tags -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#004D39">
-    <link rel="apple-touch-icon" href="https://cdn.phototourl.com/member/2026-06-22-9c8cae80-d27c-400e-9d06-bd4f4d513a86.jpg">
+    <link rel="apple-touch-icon" href="https://cdn.phototourl.com/member/2026-05-11-f794e908-eeb4-479c-ac42-66b5b1cbcdb3.jpg">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="AlibabuBD">
@@ -107,7 +108,6 @@
 .detailSwiper .swiper-pagination-bullet-active {
     background: var(--primary) !important;
 }
-
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: var(--bg-light);
@@ -392,7 +392,7 @@
             <div class="flex justify-between items-center mb-3">
               
                 <a href="#" onclick="showAppPage('home')" class="flex items-center space-x-2">
-                    <img src="https://cdn.phototourl.com/member/2026-06-22-9c8cae80-d27c-400e-9d06-bd4f4d513a86.jpg" alt="Logo" class="h-8 md:h-10">
+                    <img src="https://cdn.phototourl.com/member/2026-06-23-ae2c985a-232f-45fd-93d5-ac3cf0e103be.jpg" alt="Logo" class="h-8 md:h-10">
                     <span class="text-xl md:text-2xl font-black text-[#004D39]"> RM OUTFITS<span class="text-[#FF1744]"></span></span>
                 </a>
 
@@ -634,9 +634,6 @@
             </footer>
         </aside>
     </div>
-<!-- ========================================== -->
-<!-- 🚀 RM OUTFITS PREMIUM FOOTER 🚀 -->
-<!-- ========================================== -->
 <footer class="bg-[#630d16] text-white pt-12 pb-8 mt-10">
     <div class="container mx-auto px-6">
         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-12">
@@ -698,12 +695,12 @@
         <!-- Bottom Copyright -->
         <div class="border-t border-white/10 mt-12 pt-6 text-center">
             <p class="text-[10px] text-gray-400 uppercase tracking-[3px]">
-                &copy; 2024 <span class="text-[#b8860b] font-bold">RM OUTFITS</span>. Crafted with Integrity.
+                &copy; 2026 <span class="text-[#b8860b] font-bold">RM OUTFITS</span>. Crafted with Integrity.
             </p>
         </div>
     </div>
 </footer>
-<!-- ========================================== -->
+
 
     <nav class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-3 flex justify-between items-center z-[1000] md:hidden">
         <button onclick="showAppPage('home')" class="nav-btn active text-[#004D39] flex flex-col items-center gap-1">
@@ -1280,20 +1277,28 @@ window.closeProductDetail = () => {
         window.detailSwiperInstance.destroy();
     }
 };
- async function fetchSliders() {
+ let mySwiperInstance = null; // স্লাইডার ইন্সট্যান্স রাখার জন্য
+
+async function fetchSliders() {
     const sliderWrapper = document.getElementById('slider-wrapper');
     
+    // ১. প্রথমে ক্যাশ থেকে লোড করা (Fast Loading)
     const cachedSliders = localStorage.getItem('alibabubd_cached_sliders');
     if (cachedSliders) {
         sliderWrapper.innerHTML = cachedSliders;
-        initSwiper(); // স্লাইডার চালু করা
+        initSwiper();
     }
 
-    try {
-        const snapshot = await db.collection('sliders').orderBy('createdAt', 'desc').get();
-        if (snapshot.empty) return;
+    // ২. Firestore থেকে Real-time ডাটা আনা (onSnapshot ব্যবহার করে)
+    // এর ফলে অ্যাডমিন ডিলিট করলে এখানেও সাথে সাথে ডিলিট হয়ে যাবে
+    db.collection('sliders').orderBy('createdAt', 'desc').onSnapshot((snapshot) => {
+        if (snapshot.empty) {
+            sliderWrapper.innerHTML = ""; // যদি কোনো স্লাইডার না থাকে
+            localStorage.removeItem('alibabubd_cached_sliders');
+            return;
+        }
 
-        const sliderHtml = snapshot.docs.map(doc => {
+        let sliderHtml = snapshot.docs.map(doc => {
             const data = doc.data();
             return `
             <div class="swiper-slide cursor-pointer" onclick="handleSliderClick('${data.actionType}', '${data.actionValue}')">
@@ -1301,17 +1306,27 @@ window.closeProductDetail = () => {
             </div>`;
         }).join('');
 
+        // UI আপডেট করা
         sliderWrapper.innerHTML = sliderHtml;
+        
+        // ক্যাশ আপডেট করা
         localStorage.setItem('alibabubd_cached_sliders', sliderHtml);
-        initSwiper(); // নতুন ডাটা দিয়ে স্লাইডার চালু
-    } catch(e) {
-        console.error(e);
-    }
+        
+        // স্লাইডার নতুন করে রিস্টার্ট করা
+        initSwiper();
+    }, (error) => {
+        console.error("Slider fetch error:", error);
+    });
 }
 
-// স্লাইডার ইনিশিয়ালাইজ করার জন্য ছোট একটি ফাংশন
+// স্লাইডার ইনিশিয়ালাইজ করার ফাংশন
 function initSwiper() {
-    new Swiper(".mySwiper", {
+    // যদি আগে থেকে স্লাইডার চালু থাকে তবে সেটি ধ্বংস (Destroy) করে নতুন করে চালু করা
+    if (mySwiperInstance) {
+        mySwiperInstance.destroy(true, true);
+    }
+
+    mySwiperInstance = new Swiper(".mySwiper", {
         loop: true,
         autoplay: {
             delay: 4000,
@@ -1320,9 +1335,8 @@ function initSwiper() {
         speed: 1000,
         pagination: {
             el: ".swiper-pagination",
-            type: "fraction", // এটি ডট এর বদলে "১ / ৫" ফরম্যাট চালু করবে
+            type: "fraction",
             renderFraction: function (currentClass, totalClass) {
-                // এটি লেখার স্টাইল কাস্টমাইজ করবে
                 return '<span class="' + currentClass + '"></span>' +
                        ' <span class="opacity-50">/</span> ' +
                        '<span class="' + totalClass + '"></span>';
@@ -1330,7 +1344,6 @@ function initSwiper() {
         },
     });
 }
-      
         function handleSliderClick(type, value) {
             if (type === 'youtube') {
                 window.open(value, '_blank');
@@ -1383,13 +1396,13 @@ function initSwiper() {
             if (window.tempDetailQty < 1) window.tempDetailQty = 1; 
             document.getElementById('detail-qty-display').innerText = window.tempDetailQty;
         };
-   window.buyNow = (id) => {
-    // লগইন চেক সরিয়ে দেওয়া হলো
+        window.buyNow = (id) => {
     const product = products.find(p => p.id === id);
     if (product) {
         let qtyToAdd = window.tempDetailQty || 1;
         closeProductDetail();
 
+        // লগইন চেক করার শর্তটি বাদ দেওয়া হয়েছে
         openCheckout([{
             ...product,
             quantity: qtyToAdd,
@@ -1402,7 +1415,6 @@ function initSwiper() {
         window.tempDetailQty = 1;
     }
 };
-        
         window.addToCart = (id, isFromDetail = false) => {
             const product = products.find(p => p.id === id);
             if (!product) return;
@@ -1673,24 +1685,20 @@ function togglePasswordVisibility() {
         };
 
         window.goToCheckout = () => {
-    // লগইন চেকটি সরিয়ে দেওয়া হলো বা কমেন্ট করা হলো
-    /*
-    if (!currentUser) {
-        premiumAlert('warning', 'Login Required', 'চেকআউট করতে আগে লগইন করুন।');
-        closeCart();
-        showAppPage('profile');
-        return;
-    }
-    */
-
-    const selectedItems = cart.filter(item => item.isSelected !== false);
-    if (selectedItems.length === 0) {
-        toast('error', 'দয়া করে অন্তত একটি প্রোডাক্ট সিলেক্ট করুন!');
-        return;
-    }
-    closeCart();
-    openCheckout(selectedItems);
-};
+            if (!currentUser) {
+                premiumAlert('warning', 'Login Required', 'চেকআউট করতে আগে লগইন করুন।');
+                closeCart();
+                showAppPage('profile');
+                return;
+            }
+            const selectedItems = cart.filter(item => item.isSelected !== false);
+            if (selectedItems.length === 0) {
+                toast('error', 'দয়া করে অন্তত একটি প্রোডাক্ট সিলেক্ট করুন!');
+                return;
+            }
+            closeCart();
+            openCheckout(selectedItems);
+        };
 
       
         window.updateQty = (id, change) => {
@@ -1705,7 +1713,17 @@ function togglePasswordVisibility() {
         };
 
         
-        
+        window.goToCheckout = () => {
+    // লগইন চেক করার শর্তটি (if (!currentUser)) বাদ দেওয়া হয়েছে
+    const selectedItems = cart.filter(item => item.isSelected !== false);
+    if (selectedItems.length === 0) {
+        toast('error', 'দয়া করে অন্তত একটি প্রোডাক্ট সিলেক্ট করুন!');
+        return;
+    }
+    closeCart();
+    openCheckout(selectedItems);
+};
+
         
         document.getElementById('search-input').addEventListener('input', (e) => {
             const query = e.target.value.toLowerCase();
@@ -2337,25 +2355,20 @@ async function fetchCategories() {
 
         let currentCheckoutItems = [];
         let selectedDeliveryRule = null;
-
-      
-        async function openCheckout(items = []) {
-    // লগইন চেক সরিয়ে দেওয়া হয়েছে যেন সবাই অর্ডার করতে পারে
-    
+async function openCheckout(items = []) {
+    // লগইন চেক করার অংশটি মুছে ফেলা হয়েছে
     currentCheckoutItems = items.length > 0 ? items : cart;
     if (currentCheckoutItems.length === 0) {
         toast('error', 'Cart is empty!');
         return;
     }
 
-    // চেকআউট মোডাল দেখানো
     document.getElementById('checkout-modal').classList.remove('hidden');
     document.body.style.overflow = 'hidden';
 
     loadBDDivisions();
     renderCheckoutSummary();
 
-    // ডেলিভারি রুল সেট করা
     const ruleId = currentCheckoutItems[0].deliveryRule;
     if (ruleId) {
         try {
@@ -2499,7 +2512,7 @@ async function fetchCategories() {
     // ১. ক্যাশ অন ডেলিভারি অপশন
     if (isCodOn) {
         html += `
-        <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer mb-4 shadow-sm" onclick="togglePaymentView('cod')">
+        <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer mb-3 shadow-sm" onclick="togglePaymentView('cod')">
             <input type="radio" name="pay-method" value="COD" checked class="w-5 h-5 accent-[#004D39]">
             <div class="flex items-center gap-3">
                 <div class="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
@@ -2513,79 +2526,83 @@ async function fetchCategories() {
         </label>`;
     }
 
-    // ২. অনলাইন পেমেন্ট (বিকাশ/নগদ)
+    // ২. অনলাইন পেমেন্ট অপশন (অ্যাডভান্স বা ফুল পে)
     if (isAdvanceOn || isFullPayOn) {
-        // এডমিনের দেওয়া নাম্বারগুলো নেওয়া হচ্ছে
-        const bkashNum = rule.advancePay ? rule.advancePay.bkash : (rule.fullPay ? rule.fullPay.details : 'N/A');
-        const nagadNum = rule.advancePay ? rule.advancePay.nagad : (rule.fullPay ? rule.fullPay.details : 'N/A');
+        html += `<div class="space-y-3">`;
 
-        html += `
-        <div class="space-y-3">
-            <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer shadow-sm" onclick="togglePaymentView('online')">
-                <input type="radio" name="pay-method" value="Online Payment" ${!isCodOn ? 'checked' : ''} class="w-5 h-5 accent-[#004D39]">
+        if (isAdvanceOn) {
+            html += `
+            <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer shadow-sm" onclick="togglePaymentView('advance')">
+                <input type="radio" name="pay-method" value="Advance Pay" ${!isCodOn ? 'checked' : ''} class="w-5 h-5 accent-[#004D39]">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-600">
-                        <i class="fa-solid fa-mobile-screen-button"></i>
+                        <i class="fa-solid fa-paper-plane"></i>
                     </div>
                     <div>
-                        <p class="font-bold text-sm">Pay with bKash / Nagad</p>
-                        <p class="text-[10px] text-gray-400">বিকাশ বা নগদ অ্যাপ থেকে পেমেন্ট করুন</p>
+                        <p class="font-bold text-sm">Pay Delivery Charge (Advance)</p>
+                        <p class="text-[10px] text-gray-400">বিকাশ/নগদ এ অগ্রিম পেমেন্ট করুন</p>
                     </div>
                 </div>
-            </label>
+            </label>`;
+        }
 
-            <!-- বিকাশ ও নগদ নাম্বার সেকশন -->
-            <div id="payment-details-box" class="${isCodOn ? 'hidden' : ''} border-2 border-emerald-100 rounded-[32px] overflow-hidden bg-white mt-4 fade-in">
-                <div class="p-5">
-                    <p class="text-center text-[11px] font-bold text-gray-400 uppercase mb-4 tracking-widest">Select Payment Method</p>
+        if (isFullPayOn) {
+            html += `
+            <label class="flex items-center gap-4 p-4 bg-white border-2 border-emerald-50 rounded-2xl cursor-pointer shadow-sm" onclick="togglePaymentView('full')">
+                <input type="radio" name="pay-method" value="Full Payment" ${(!isCodOn && !isAdvanceOn) ? 'checked' : ''} class="w-5 h-5 accent-[#004D39]">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center text-orange-600">
+                        <i class="fa-solid fa-credit-card"></i>
+                    </div>
+                    <div>
+                        <p class="font-bold text-sm">Full Payment</p>
+                        <p class="text-[10px] text-gray-400">অর্ডারের পুরো টাকা অগ্রিম পেমেন্ট করুন</p>
+                    </div>
+                </div>
+            </label>`;
+        }
+
+        // অ্যাডমিন নাম্বার নির্ধারণ (বিকাশ নাম্বারকে প্রাইমারি হিসেবে ধরা হয়েছে)
+        const adminNumber = isFullPayOn ? rule.fullPay.details : (rule.advancePay ? (rule.advancePay.bkash || rule.advancePay.nagad) : 'N/A');
+
+        html += `
+        <div id="payment-details-box" class="${isCodOn ? 'hidden' : ''} border-2 border-emerald-100 rounded-[32px] overflow-hidden bg-white mt-4 fade-in">
+            <div class="bg-emerald-50 p-5 text-center">
+                <img src="https://cdn.phototourl.com/free/2026-06-11-3b579f48-23a9-458c-a17d-4ad4b482a04b.jpg" class="h-14 mx-auto mb-3 rounded-lg shadow-sm border border-white">
+                <p class="text-[12px] font-black text-emerald-800 uppercase tracking-[2px]">BKash, Nagad, Rocket, Upay</p>
+            </div>
+            <div class="p-6 space-y-5">
+                <div class="bg-gray-50 p-4 rounded-2xl border border-dashed border-emerald-200">
+                    <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">Send Money to this number</p>
+                    <div class="flex items-center justify-between">
+                        <span id="display-number" class="text-xl font-black text-[#004D39]">${adminNumber}</span>
+                        <button type="button" onclick="copyNumber()" class="bg-[#004D39] text-white px-4 py-1.5 rounded-lg text-[10px] font-bold active:scale-95 shadow-md">COPY</button>
+                    </div>
+                </div>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label class="text-[11px] text-gray-600 font-bold mb-2 block">ট্রানজেকশন আইডি (Transaction ID):</label>
+                        <input type="text" id="trx-id-input" placeholder="e.g. 8N7A6D5F" 
+                            class="w-full p-4 rounded-xl border-2 border-gray-100 outline-none focus:border-emerald-500 font-bold uppercase text-sm">
+                    </div>
                     
-                    <div class="grid grid-cols-2 gap-4">
-                        <!-- Bkash Button -->
-                        <div id="btn-bkash" onclick="selectProvider('bkash', '${bkashNum}')" class="provider-btn cursor-pointer border-2 border-gray-100 rounded-2xl p-3 flex flex-col items-center gap-2 transition-all hover:bg-pink-50">
-                            <img src="https://www.image2url.com/r2/default/images/1776444482333-7685eb17-4482-4a46-b0e9-233dbbf8afb2.jpg" class="h-10 rounded-lg">
-                            <span class="text-[10px] font-black text-pink-600">bKash</span>
-                        </div>
-                        
-                        <!-- Nagad Button -->
-                        <div id="btn-nagad" onclick="selectProvider('nagad', '${nagadNum}')" class="provider-btn cursor-pointer border-2 border-gray-100 rounded-2xl p-3 flex flex-col items-center gap-2 transition-all hover:bg-orange-50">
-                            <img src="https://www.image2url.com/r2/default/images/1776444618043-a5b450ee-68e9-4302-b10d-10ffcad7e9e5.jpg" class="h-10 rounded-lg">
-                            <span class="text-[10px] font-black text-orange-600">Nagad</span>
-                        </div>
-                    </div>
-
-                    <!-- ডাইনামিক নাম্বার বক্স -->
-                    <div class="mt-6 bg-gray-50 p-4 rounded-2xl border border-dashed border-emerald-200">
-                        <p class="text-[10px] font-bold text-gray-500 uppercase mb-2">Send Money / Pay to this <span id="selected-provider-name" class="text-[#004D39]">Number</span></p>
-                        <div class="flex items-center justify-between">
-                            <span id="display-number" class="text-xl font-black text-[#004D39]">Select Method</span>
-                            <button type="button" onclick="copyNumber()" class="bg-[#004D39] text-white px-4 py-1.5 rounded-lg text-[10px] font-bold active:scale-95 shadow-md">COPY</button>
-                        </div>
-                    </div>
-
-                    <div class="mt-6 space-y-4">
-                        <div>
-                            <label class="text-[11px] text-gray-600 font-bold mb-2 block">Transaction ID:</label>
-                            <input type="text" id="trx-id-input" placeholder="e.g. 8N7A6D5F" class="w-full p-4 rounded-xl border-2 border-gray-100 outline-none focus:border-emerald-500 font-bold uppercase text-sm">
-                        </div>
-                        <div>
-                            <label class="text-[11px] text-gray-600 font-bold mb-2 block">Amount Paid:</label>
-                            <input type="number" id="pay-amount-input" placeholder="টাকার পরিমাণ লিখুন" class="w-full p-4 rounded-xl border-2 border-gray-100 outline-none focus:border-emerald-500 font-bold text-sm">
-                        </div>
+                    <div>
+                        <label class="text-[11px] text-gray-600 font-bold mb-2 block">পেমেন্টকৃত টাকার পরিমাণ (Amount):</label>
+                        <input type="number" id="pay-amount-input" placeholder="কত টাকা পাঠিয়েছেন তা লিখুন" 
+                            class="w-full p-4 rounded-xl border-2 border-gray-100 outline-none focus:border-emerald-500 font-bold text-sm">
                     </div>
                 </div>
             </div>
-        </div>`;
+        </div></div>`;
     }
 
     container.innerHTML = html;
     updateTotalBill(rule);
 
-    // ডিফল্টভাবে প্রথম পেমেন্ট মেথড সিলেক্ট করে রাখা (বিকাশ)
     if (!isCodOn) {
-        const bkashNum = rule.advancePay ? rule.advancePay.bkash : (rule.fullPay ? rule.fullPay.details : 'N/A');
-        setTimeout(() => selectProvider('bkash', bkashNum), 100);
+        togglePaymentView(isAdvanceOn ? 'advance' : 'full');
     }
-}
 }
         // ১. চেকআউট পেজের জন্য কপি ফাংশন
 window.copyNumber = () => {
@@ -2645,7 +2662,8 @@ function fallbackCopyText(text, message) {
     }
     textArea.remove();
 }
-async function placeOrder() {
+     
+        async function placeOrder() {
     const btn = document.getElementById('place-order-btn');
     const name = document.getElementById('ship-name').value;
     const phone = document.getElementById('ship-number').value;
@@ -2670,12 +2688,11 @@ async function placeOrder() {
         if (!payAmount || payAmount === '0') return premiumAlert('warning', 'Amount Required', 'পেমেন্টকৃত টাকার পরিমাণ লিখুন।');
     }
 
-    // গুরুত্বপূর্ণ পরিবর্তন: ইউজার লগইন না থাকলে বিকল্প ইমেইল/আইডি ব্যবহার
+    // অর্ডার ডাটা অবজেক্টে ইমেইল ফিল্ডটি আপডেট করা হয়েছে
     const orderData = {
         customerName: name,
         customerNumber: phone,
-        customerEmail: currentUser ? currentUser.email : "Guest_" + phone, // গেস্ট ইউজার হলে তার ফোন নম্বর দিয়ে আইডি তৈরি
-        isGuest: !currentUser, // গেস্ট অর্ডার কিনা তা বোঝার জন্য
+        customerEmail: currentUser ? currentUser.email : "Guest Order (" + phone + ")", // লগইন না থাকলে গেস্ট দেখাবে
         address: {
             division,
             district,
@@ -2701,13 +2718,7 @@ async function placeOrder() {
         cart = cart.filter(item => !currentCheckoutItems.find(ci => ci.id === item.id));
         updateCart();
         closeCheckout();
-        
-        // যদি গেস্ট হয় তবে 'My Orders' পেজে কিছু দেখাবে না, তাই হোম পেজে পাঠানো ভালো
-        if (currentUser) {
-            showAppPage('orders');
-        } else {
-            showAppPage('home');
-        }
+        showAppPage('orders');
     } catch (e) {
         alert("Error placing order: " + e.message);
     } finally {
